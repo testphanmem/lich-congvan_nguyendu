@@ -1,0 +1,119 @@
+<style>
+  #hopTaiCv { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10006; justify-content: center; align-items: center; }
+  .hopKh { background: #fff; padding: 20px; border-radius: 8px; width: 450px; max-width: 95%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: 'Times New Roman', serif; }
+  .hopTde { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; text-align: center; font-weight: bold; color: #0891b2; font-size: 18px; }
+  .vungTha { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; border-radius: 6px; transition: 0.3s; background: #fafafa; margin-bottom: 15px; }
+  .vungTha:hover { border-color: #0891b2; background: #f0f9ff; }
+  .nutDht { width: 100%; padding: 10px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+  .nutBdt { width: 100%; padding: 10px; background: #0891b2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; opacity: 0.5; pointer-events: none; }
+  .nutBdt.dangMo { opacity: 1; pointer-events: auto; }
+</style>
+
+<div id="hopTaiCv">
+  <div class="hopKh">
+    <div class="hopTde">📁 TẢI TÀI LIỆU CÔNG VĂN</div>
+    
+    <div style="margin-bottom: 10px; font-weight: bold; font-size: 13px;">1. Chọn thư mục lưu:</div>
+    <select id="chonTmCv" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px;"></select>
+    
+    <div style="margin-bottom: 10px; font-weight: bold; font-size: 13px;">2. Chế độ lưu:</div>
+    <div style="display: flex; gap: 15px; margin-bottom: 15px; background: #f1f5f9; padding: 10px; border-radius: 6px;">
+        <label><input type="radio" name="cdGhiCv" value="thayThe" checked> Thay thế file cũ</label>
+        <label><input type="radio" name="cdGhiCv" value="themTiep"> Thêm tiếp file</label>
+    </div>
+
+    <div class="vungTha" onclick="document.getElementById('nhapTepCv').click()">
+      <span id="nhanTepCv">Nhấn để chọn thư mục/files</span>
+      <input type="file" id="nhapTepCv" style="display:none" webkitdirectory directory multiple onchange="daChonTepCv(this)">
+    </div>
+
+    <div id="tThaiCv" style="text-align:center; font-weight:bold; min-height:20px; font-size:13px; color:#333; margin-bottom:10px;"></div>
+    
+    <button id="nBdTaiCv" class="nutBdt" onclick="thucHienTaiCv()">BẮT ĐẦU TẢI LÊN</button>
+    <button class="nutDht" onclick="dongHopThoaiTaiCv()">ĐÓNG</button>
+  </div>
+</div>
+
+<script>
+  let tNguonCv = null;
+  let tepDcChonCv = [];
+  let lkCuCv = "";
+
+  function moHopThoaiTaiCv(btn) {
+      if (!qNhap) return hienTbao("Không có quyền!", "loi");
+      const tr = btn.closest('tr');
+      const soCv = tr.querySelector('.cSo').value.trim();
+      if (!soCv) return hienTbao("Vui lòng nhập 'Số/Ký hiệu' trước khi đính kèm!", "loi");
+      
+      tNguonCv = btn;
+      lkCuCv = tr.querySelector('.gLk').value;
+      
+      document.getElementById('tThaiCv').innerText = "Đang quét thư mục Drive...";
+      document.getElementById('hopTaiCv').style.display = 'flex';
+      
+      heThong.server.chay.voiKhiTcong(kq => {
+          const sel = document.getElementById('chonTmCv'); sel.innerHTML = "";
+          if (kq.tCong && kq.dLieu.length > 0) {
+              kq.dLieu.forEach(f => { sel.add(new Option("📂 " + f.ten, f.idt)); });
+              document.getElementById('tThaiCv').innerText = "Sẵn sàng.";
+          } else document.getElementById('tThaiCv').innerText = "Không tìm thấy thư mục.";
+      }).cvLayTmCon();
+  }
+
+  function dongHopThoaiTaiCv() {
+      document.getElementById('hopTaiCv').style.display = 'none';
+      document.getElementById('tThaiCv').innerText = "";
+      document.getElementById('nhapTepCv').value = "";
+      document.getElementById('nhanTepCv').innerText = "Nhấn để chọn thư mục/files";
+      document.getElementById('nBdTaiCv').classList.remove('dangMo');
+      tepDcChonCv = []; lkCuCv = ""; tNguonCv = null;
+  }
+
+  function daChonTepCv(inp) {
+      if (inp.files.length > 0) {
+          tepDcChonCv = inp.files;
+          const tenT = tepDcChonCv[0].webkitRelativePath.split('/')[0] || "Các files";
+          document.getElementById('nhanTepCv').innerText = `📂 ${tenT} (${tepDcChonCv.length} files)`;
+          document.getElementById('nBdTaiCv').classList.add('dangMo');
+          document.getElementById('tThaiCv').innerText = "Đã chọn xong. Sẵn sàng tải.";
+      }
+  }
+
+  function thucHienTaiCv() {
+      if (!tepDcChonCv || tepDcChonCv.length === 0) return;
+      const nBd = document.getElementById('nBdTaiCv'); const st = document.getElementById('tThaiCv');
+      const idTm = document.getElementById('chonTmCv').value;
+      const cdGhi = document.querySelector('input[name="cdGhiCv"]:checked').value;
+      const soCv = tNguonCv.closest('tr').querySelector('.cSo').value.trim().replace(/[\\/:*?"<>|]/g, '_');
+      const tenTm = soCv + "_" + tepDcChonCv[0].webkitRelativePath.split('/')[0];
+      
+      nBd.classList.remove('dangMo'); st.style.color = "blue"; st.innerText = `⏳ Đang đọc ${tepDcChonCv.length} file...`;
+      
+      let mTep = []; let dem = 0;
+      Array.from(tepDcChonCv).forEach(f => {
+          const rd = new FileReader();
+          rd.onload = e => {
+              mTep.push({ tenTep: f.name, kieu: f.type, dieuL: e.target.result.split(',')[1] });
+              dem++;
+              if (dem === tepDcChonCv.length) {
+                  st.innerText = "⏳ Đang gửi dữ liệu lên Drive...";
+                  heThong.server.chay.voiKhiTcong(kq => {
+                      if (kq.tCong) {
+                          st.style.color = "green"; st.innerText = "✅ " + kq.tBao;
+                          if (tNguonCv) {
+                              const tr = tNguonCv.closest('tr');
+                              tr.querySelector('.gLk').value = kq.lkTep;
+                              const mvs = kq.lkTep.split(',').map(l => l.trim()).filter(l => l!=="");
+                              tr.querySelector('.vungHthiLk').innerHTML = mvs.map((l, i) => `<a href="${l}" target="_blank" class="nutTaiMinhc nutXemFile">📎 ${i + 1}</a>`).join('');
+                              tNguonCv.innerHTML = '📝 Sửa/Thêm'; tNguonCv.style.borderColor = "#f59e0b";
+                          }
+                          setTimeout(dongHopThoaiTaiCv, 1000);
+                      } else { st.style.color = "red"; st.innerText = "❌ " + kq.tBao; nBd.classList.add('dangMo'); }
+                  }).voiKhiLoi(l => { st.style.color = "red"; st.innerText = "❌ Lỗi: " + l.message; nBd.classList.add('dangMo'); })
+                  .cvTaiTmMinhChung(idTm, tenTm, mTep, lkCuCv, cdGhi);
+              }
+          };
+          rd.readAsDataURL(f);
+      });
+  }
+</script>
