@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <link rel="icon" href="https://i.ibb.co/8Df1xXsN/Logo-nguyen-du.png">
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Hệ thống quản lý công văn và lịch công tác nội bộ - Trường TH&THCS Hợp Thành.">
+  <title>Quản lý Công văn & Lịch công tác - TRƯỜNG TIỂU HỌC NGUYỄN DU</title>
+
+  <script src="ketnoi.js?v=20260325"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    /* --- 1. MÀN HÌNH CHỜ KẾT NỐI --- */
+    #loading-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.95); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s ease;
+    }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 5px solid #e2e8f0; border-top-color: #1e3a8a; border-radius: 50%;
+      animation: spin 1s linear infinite; margin-bottom: 15px;
+    }
+    .loading-text { font-family: 'Times New Roman', serif; font-weight: bold; color: #1e3a8a; font-size: 16px; letter-spacing: 1px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- 2. MÀN HÌNH ĐĂNG NHẬP --- */
+    #login-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #f0fdf4; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 9000;
+      font-family: 'Times New Roman', serif;
+    }
+    .login-box {
+      background: white; padding: 40px; border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
+      border-top: 5px solid #1e3a8a; max-width: 450px; width: 95%;
+    }
+    .login-logo { width: 80px; height: 80px; margin-bottom: 15px; }
+
+    /* --- 3. CẤU HÌNH GIAO DIỆN CHÍNH --- */
+    body { font-family: 'Times New Roman', serif; background: #f3f4f6; margin: 0; padding: 15px; box-sizing: border-box; }
+    
+    .header-info {
+      display: flex; align-items: center; justify-content: space-between;
+      background: white; padding: 10px 20px; border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;
+      border-left: 4px solid #1e3a8a;
+    }
+    .header-title { font-size: 18px; font-weight: bold; color: #1e3a8a; text-transform: uppercase; }
+
+    /* --- 4. CSS TABS --- */
+    .nav-tabs { display: flex; gap: 5px; border-bottom: 2px solid #e2e8f0; margin-bottom: 15px; }
+    .tab-btn {
+      padding: 8px 16px; background: #f1f5f9; border: 1px solid #cbd5e1;
+      border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer;
+      font-weight: bold; color: #475569; transition: 0.2s;
+    }
+    .tab-btn.active { background: #1e3a8a; color: white; border-color: #1e3a8a; }
+    .tab-content {
+      display: none; background: white; padding: 15px; border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .tab-content.active { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- 5. BẢNG DỮ LIỆU --- */
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px; vertical-align: middle; }
+    th { background: #e0f2fe; color: #0f172a; text-align: center; font-size: 14px; }
+    td { background: white; }
+    input[type="text"], input[type="date"], select, textarea {
+      width: 100%; border: none; padding: 5px; font-family: inherit; font-size: 14px;
+      box-sizing: border-box; background: transparent; outline: none;
+    }
+    textarea { resize: none; overflow: hidden; min-height: 30px; }
+
+    /* --- 6. NÚT BẤM --- */
+    .btn-submit {
+      padding: 8px 20px; background: #16a34a; color: white; border: none;
+      border-radius: 4px; font-weight: bold; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn-submit:hover { background: #15803d; }
+    .btn-delete { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer; padding: 2px 8px; font-weight: bold; }
+    
+    /* --- 7. TOAST THÔNG BÁO --- */
+    #toast-msg {
+      position: fixed; bottom: 20px; right: 20px; background: #333; color: white;
+      padding: 12px 24px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: none; z-index: 10000; font-weight: bold;
+    }
+    #toast-msg.error { background: #dc2626; }
+    #toast-msg.success { background: #16a34a; }
+  </style>
+</head>
+<body>
+
+  <div id="login-overlay">
+    <div class="login-box">
+      <img src="https://i.ibb.co/8Df1xXsN/Logo-nguyen-du.png" class="login-logo">
+      <h2 style="color: #b91c1c; margin-top: 0; font-size: 20px; text-transform: uppercase; font-weight: bold;">Hệ thống Quản lý</h2>
+      <h3 style="color: #1e3a8a; margin-bottom: 25px; font-size: 16px;">Công văn & Lịch công tác</h3>
+      
+      <div style="font-size: 13px; padding: 10px; margin-bottom: 20px; border-radius: 6px; background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; text-align: left;">
+        ✅ Sử dụng xác thực an toàn của Google.<br>Tuyệt đối không lưu trữ thông tin cá nhân.
+      </div>
+      
+      <div id="g_id_onload"
+           data-client_id="407480994586-m6fpq6sfcc90qqj9k08rsmi1lge6br94.apps.googleusercontent.com"
+           data-callback="xulyPhienDn"
+           data-auto_prompt="false">
+      </div>
+      <div class="d-flex justify-content-center w-100 mt-2">
+         <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="continue_with" data-shape="rectangular" data-logo_alignment="left"></div>
+      </div>
+      
+      <div style="margin-top: 20px; font-size: 11px; color: #999; font-weight: bold;">Phát triển bởi: Hoàng Ngọc Lâm</div>
+    </div>
+  </div>
+
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Đang khởi tạo hệ thống...</div>
+  </div>
+
+  <div id="main-app" style="display: none;">
+    <div class="header-info">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <img src="https://i.ibb.co/8Df1xXsN/Logo-nguyen-du.png" style="height: 40px;">
+        <div>
+          <div class="header-title">TRƯỜNG TIỂU HỌC NGUYỄN DU</div>
+          <div style="font-size: 12px; color: #64748b;">Quản lý Công văn & Lịch công tác</div>
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <div id="user-info" style="font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 4px;"></div>
+        <button onclick="dXuat()" style="background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 10px; font-size: 12px; cursor: pointer;">Đăng xuất</button>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="btnTabLich" onclick="chuyenMuc('tabLich', this)">📅 NHẬP LỊCH</button>
+      <button class="tab-btn" id="btnTabCv" onclick="chuyenMuc('tabCongVan', this)">📂 NHẬP CÔNG VĂN</button>
+      <button class="tab-btn" id="btnTabTimLich" onclick="chuyenMuc('tabSearch', this)">🔍 TRA CỨU LỊCH</button>
+      <button class="tab-btn" id="btnTabTimCv" onclick="chuyenMuc('tabSearchCongVan', this)">🔍 TRA CỨU CÔNG VĂN</button>
+    </div>
+
+    <div id="tabLich" class="tab-content active"></div>
+    <div id="tabCongVan" class="tab-content"></div>
+    <div id="tabSearch" class="tab-content"></div>
+    <div id="tabSearchCongVan" class="tab-content"></div>
+
+    <div id="modalContainerCongVan"></div>
+  </div>
+
+  <div id="toast-msg"></div>
+
+  <script>
+  let window_qNhap = false;
+
+  window.onload = function() {
+      const tc = sessionStorage.getItem("cvTkHienTai");
+      if(tc) {
+          window.cvTkToanCuc = tc;
+          document.getElementById('login-overlay').style.display = 'none';
+          document.getElementById('loading-overlay').style.display = 'flex';
+          taiPhanGiaoDien();
+      } else {
+          document.getElementById('loading-overlay').style.display = 'none';
+          document.getElementById('login-overlay').style.display = 'flex';
+      }
+  };
+
+  function xulyPhienDn(ph) {
+      try {
+          const dl = giaiMaJwt(ph.credential);
+          const tk = dl['em' + 'ail'];
+          sessionStorage.setItem("cvTkHienTai", tk);
+          window.cvTkToanCuc = tk;
+          document.getElementById('login-overlay').style.display = 'none';
+          document.getElementById('loading-overlay').style.display = 'flex';
+          taiPhanGiaoDien();
+      } catch (e) { alert("Lỗi: " + e.message); }
+  }
+
+  function giaiMaJwt(chuoi) {
+      let b64 = chuoi.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      let j = decodeURIComponent(atob(b64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+      return JSON.parse(j);
+  }
+
+  function dXuat() {
+      sessionStorage.removeItem("cvTkHienTai");
+      window.cvTkToanCuc = null;
+      location.reload();
+  }
+
+  async function taiPhanGiaoDien() {
+      try {
+        const mb = "?v=" + new Date().getTime();
+        const [p1, p2, p3, p4, p5] = await Promise.all([
+            fetch('./SCV_Tab_NhapLich.html' + mb),
+            fetch('./SCV_Tab_NhapCongVan.html' + mb),
+            fetch('./SCV_Tab_TraCuuLich.html' + mb),
+            fetch('./SCV_Tab_TraCuuCongVan.html' + mb),
+            fetch('./SCV_MinhChung_CongVan.html' + mb)
+        ]);
+
+        document.getElementById('tabLich').innerHTML = await p1.text();
+        document.getElementById('tabCongVan').innerHTML = await p2.text();
+        document.getElementById('tabSearch').innerHTML = await p3.text();
+        document.getElementById('tabSearchCongVan').innerHTML = await p4.text();
+        document.getElementById('modalContainerCongVan').innerHTML = await p5.text();
+
+        ['tabLich','tabCongVan','tabSearch','tabSearchCongVan','modalContainerCongVan'].forEach(id => thuchScript(document.getElementById(id)));
+
+        setTimeout(() => {
+            heThong.server.chay.voiKhiTcong(kq => {
+                document.getElementById('loading-overlay').style.display = 'none';
+                
+                if (!kq.qXem && !kq.qNhap) {
+                    hienTbao(kq.tBao || "Tài khoản chưa được cấp quyền!", "error");
+                    document.getElementById('login-overlay').style.display = 'flex';
+                    sessionStorage.removeItem("cvTkHienTai");
+                    window.cvTkToanCuc = null;
+                    return;
+                }
+
+                document.getElementById('main-app').style.display = 'block';
+                if(typeof khoiTaoCv === 'function' && kq.dsMuc) khoiTaoCv(kq.dsMuc);
+                if(typeof khoiTaoTimCv === 'function' && kq.dsMuc) khoiTaoTimCv(kq.dsMuc);
+
+                if (!kq.qNhap) {
+                    hienTbao("Chỉ có quyền xem tra cứu.", "error");
+                    document.getElementById('user-info').innerHTML = "Tà&#8203;i khoả&#8203;n khá&#8203;ch (Chỉ xem)";
+                    window_qNhap = false;
+                    document.getElementById('btnTabLich').style.display = 'none';
+                    document.getElementById('btnTabCv').style.display = 'none';
+                    chuyenMuc('tabSearch', document.getElementById('btnTabTimLich'));
+                } else {
+                    document.getElementById('user-info').innerText = window.cvTkToanCuc;
+                    window_qNhap = true;
+                    if(document.getElementById('tblLich') && document.getElementById('tblLich').tBodies[0].rows.length === 0) themdongLich();
+                    if(document.getElementById('tblCongVan') && document.getElementById('tblCongVan').tBodies[0].rows.length === 0) themdongCv();
+                }
+            }).voiKhiLoi(l => {
+                document.getElementById('loading-overlay').style.display = 'none';
+                hienTbao("Lỗi xá&#8203;c thự&#8203;c: " + l.message, "error");
+                document.getElementById('login-overlay').style.display = 'flex';
+                sessionStorage.removeItem("cvTkHienTai");
+                window.cvTkToanCuc = null;
+            }).cvLayDlDau();
+        }, 800);
+      } catch (e) { 
+          document.getElementById('loading-overlay').style.display = 'none';
+          alert("Lỗi tải trang: " + e.message); 
+      }
+  }
+
+  function thuchScript(pt) {
+      const cks = pt.querySelectorAll('script');
+      cks.forEach(c => {
+          const m = document.createElement('script');
+          Array.from(c.attributes).forEach(a => m.setAttribute(a.name, a.value));
+          m.appendChild(document.createTextNode(c.innerHTML));
+          c.parentNode.replaceChild(m, c);
+      });
+  }
+
+  function chuyenMuc(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    if(id === 'tabSearch' && typeof taiDlTraCuuLich === 'function') taiDlTraCuuLich();
+    if(id === 'tabSearchCongVan' && typeof taiDlTraCuuCv === 'function') taiDlTraCuuCv();
+  }
+  
+  function hienTbao(chu, kieu='success') {
+      const b = document.getElementById('toast-msg');
+      b.innerHTML = chu; 
+      b.className = kieu === 'error' ? "error" : "success";
+      b.style.display = 'block';
+      setTimeout(() => { b.style.display = 'none'; }, 3000);
+  }
+  </script>
+</body>
+</html>

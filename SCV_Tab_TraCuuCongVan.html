@@ -1,0 +1,142 @@
+<style>
+  #tblSearchCV th, #tblSearchCV td { border: 1px solid #ccc !important; }
+  #tblSearchCV th { white-space: nowrap; background-color: #1e3a8a; color: white; }
+  .highlight-text { background-color: yellow; font-weight: bold; }
+</style>
+
+<div style="margin-bottom: 10px; overflow: hidden; display: flex; justify-content: space-between; align-items: center;">
+  <span id="status_search_cv" style="font-family:'Times New Roman'; font-style:italic; font-weight:bold; font-size:15px; color:#1e3a8a;">
+      👋 Mời chọn điều kiện để tìm kiếm...
+  </span>
+</div>
+
+<div class="cv-controls" style="flex-direction: row; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-start; padding: 10px; background:#e0f2fe; border:1px solid #bae6fd; margin-bottom:10px; display:flex;">
+    <select id="f_LoaiCQ" class="cv-combo" style="width: 130px; padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="taiDlTraCuuCv()"><option value="">-- Chiều (Đến/Đi) --</option><option value="Đến">Văn bản Đến</option><option value="Đi">Văn bản Đi</option></select>
+    <select id="f_CoQuan" class="cv-combo" style="width: 130px; padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="taiDlTraCuuCv()"><option value="">-- CQ Ban Hành --</option></select>
+    <select id="f_LoaiVB" class="cv-combo" style="width: 130px; padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="taiDlTraCuuCv()"><option value="">-- Loại VB --</option></select>
+    
+    <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+        <span style="font-family:'Times New Roman'; font-size:13px; font-weight:bold; padding-left:5px;">Từ:</span>
+        <input type="text" id="f_DateFrom" placeholder="dd/mm/yyyy" maxlength="10" oninput="theTepL(this)" style="font-family:'Times New Roman'; font-size:14px; border:none; outline:none; width:75px; text-align:center;">
+    </div>
+    <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+        <span style="font-family:'Times New Roman'; font-size:13px; font-weight:bold; padding-left:5px;">Đến:</span>
+        <input type="text" id="f_DateTo" placeholder="dd/mm/yyyy" maxlength="10" oninput="theTepL(this)" style="font-family:'Times New Roman'; font-size:14px; border:none; outline:none; width:75px; text-align:center;">
+    </div>
+    
+    <input type="text" id="f_Keyword" placeholder="Gõ Trích yếu / Số KH..." style="font-family:'Times New Roman'; font-size:14px; padding:5px; border-radius:4px; border:1px solid #ccc; width:160px;" onkeydown="if(event.key==='Enter')taiDlTraCuuCv()">
+    
+    <button class="btn-submit" onclick="taiDlTraCuuCv()" style="background:#2563eb; padding:5px 15px;">🔍 Lọc</button>
+</div>
+
+<div class="table-scroll" style="max-height: 65vh;">
+  <table id="tblSearchCV" style="width: 100%; border-collapse: collapse; background: white;">
+    <thead style="position: sticky; top: 0; z-index: 10;">
+      <tr>
+        <th style="width:90px; text-align:center; padding:6px;">Ngày VB</th>
+        <th style="width:110px; text-align:center; padding:6px;">Số/Ký hiệu</th>
+        <th style="width:250px; text-align:center; padding:6px;">Trích yếu nội dung</th>
+        <th style="width:120px; text-align:center; padding:6px;">Nơi/Người ký</th>
+        <th style="width:100px; text-align:center; padding:6px;">Chi tiết</th>
+        <th style="width:60px; text-align:center; padding:6px;">Làm việc</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="6" style="text-align:center; font-style:italic; color:#666;">Chưa có dữ liệu</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let dlGocCv = [];
+
+  function khoiTaoTimCv(dm) {
+      const d1 = document.getElementById('f_CoQuan'); d1.innerHTML = '<option value="">-- CQ Ban Hành --</option>' + dm.nBanh.map(m => `<option value="${m}">${m}</option>`).join('');
+      const d2 = document.getElementById('f_LoaiVB'); d2.innerHTML = '<option value="">-- Loại VB --</option>' + dm.lOai.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+
+  function taiDlTraCuuCv() {
+      document.getElementById('loading-text').innerText = "⏳ Đang lấy dữ liệu...";
+      document.getElementById('loading-overlay').style.display = 'flex';
+      heThong.server.chay.voiKhiTcong(kq => {
+          document.getElementById('loading-overlay').style.display = 'none';
+          dlGocCv = kq; veBangCv();
+      }).voiKhiLoi(l => {
+          document.getElementById('loading-overlay').style.display = 'none'; hienTbao("Lỗi: " + l.message, "error");
+      }).cvLayDlCv();
+  }
+
+  function tachNgayCv(str) { 
+      if(!str) return 0; 
+      try { const p = str.split('/'); if(p.length < 3) return 0; return new Date(p[2], p[1]-1, p[0]).getTime(); } 
+      catch(e) { return 0; } 
+  }
+
+  function veBangCv() {
+      const tb = document.querySelector('#tblSearchCV tbody'); tb.innerHTML = '';
+      
+      let t1 = document.getElementById('f_LoaiCQ').value.trim();
+      let t2 = document.getElementById('f_CoQuan').value.trim();
+      let t3 = document.getElementById('f_LoaiVB').value.trim();
+      let nT = tachNgayCv(document.getElementById('f_DateFrom').value);
+      let nD = tachNgayCv(document.getElementById('f_DateTo').value);
+      let tk = document.getElementById('f_Keyword').value.trim().toLowerCase();
+
+      let dLoc = dlGocCv.filter(r => {
+          if(t1 && String(r[0]).trim() !== t1) return false;
+          if(t2 && String(r[1]).trim() !== t2) return false;
+          if(t3 && String(r[3]).trim() !== t3) return false;
+          
+          let n = tachNgayCv(r[4]);
+          if(nT > 0 && n < nT) return false;
+          if(nD > 0 && n > nD) return false;
+
+          if(tk) {
+              let so = String(r[5]).toLowerCase();
+              let ty = String(r[6]).toLowerCase();
+              if(!so.includes(tk) && !ty.includes(tk)) return false;
+          }
+          return true;
+      });
+
+      dLoc.sort((a,b) => tachNgayCv(b[4]) - tachNgayCv(a[4]));
+
+      if(dLoc.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:6px;">Không tìm thấy!</td></tr>'; return; }
+
+      dLoc.forEach(r => {
+          let nutSua = window_qNhap ? `<button class="btn-delete" style="color:#0369a1; border-color:#38bdf8; background:#e0f2fe;" onclick="chuyenSangSuaCv(this, '${encodeURIComponent(JSON.stringify(r))}')" title="Sửa dòng này">✏️</button>` : '';
+          let dsL = "";
+          let lkT = r[8]; if(typeof lkT === 'object') lkT = lkT.url || "";
+          if (lkT && lkT.trim() !== "") {
+              let cls = lkT.split(',').map(l => l.trim()).filter(l => l !== "");
+              dsL = cls.map((l, i) => `<a href="${l}" target="_blank" class="btn-icon btn-view-icon">📎 File ${i+1}</a>`).join('');
+          }
+          
+          let mau = String(r[0]).trim() === "Đến" ? "color:#b91c1c;" : "color:#047857;";
+          
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="text-align:center; padding:6px; font-weight:bold;">${r[4]}<br><span style="${mau} font-size:12px;">[VB ${r[0]}]</span></td>
+            <td style="font-weight:bold; color:#1e3a8a; text-align:center; padding:6px;">${r[5]}</td>
+            <td style="font-weight:bold; padding:6px;">${r[6]}</td>
+            <td style="text-align:center; padding:6px;">${r[7]}</td>
+            <td style="text-align:center; font-size:12px; padding:6px;">${dsL}</td>
+            <td style="text-align:center; padding:6px;">${nutSua}</td>
+          `;
+          tb.appendChild(tr);
+      });
+  }
+
+  function chuyenSangSuaCv(btn, mh) {
+       try {
+           const dG = JSON.parse(decodeURIComponent(mh));
+           document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+           document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+           document.getElementById('tabCongVan').classList.add('active');
+           document.getElementById('btnTabCv').classList.add('active');
+           themdongCv(dG);
+           const tr = btn.closest('tr'); tr.style.backgroundColor = '#fef9c3'; setTimeout(() => tr.remove(), 500);
+           hienTbao("Đã chuyển sang Nhập Công Văn!", "success");
+       } catch(e) { hienTbao("Lỗi đọc dữ liệu!", "error"); }
+  }
+</script>

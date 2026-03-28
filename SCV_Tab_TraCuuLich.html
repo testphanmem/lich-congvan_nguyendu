@@ -1,0 +1,115 @@
+<style>
+  #tblView th { white-space: nowrap; background-color: #1e3a8a; color: white; border: 1px solid #ccc !important; }
+  #tblView td { border: 1px solid #ccc !important; }
+</style>
+
+<div style="margin-bottom: 10px; overflow: hidden; display: flex; justify-content: space-between; align-items: center;">
+  <span id="status_search_lich" style="font-family:'Times New Roman'; font-style:italic; font-weight:bold; font-size:15px; color:#1e3a8a;">
+      👋 Mời chọn khoảng thời gian để xem lịch...
+  </span>
+</div>
+
+<div style="background:#e0f2fe; padding:10px; border:1px solid #bae6fd; margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+  <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+      <span style="font-family:'Times New Roman'; font-size:16px; font-weight:bold; padding-left:5px;">Từ:</span>
+      <input type="text" id="dFrom" placeholder="dd/mm/yyyy" maxlength="10" oninput="theTepL(this)" onkeydown="ktraEnterLich(event)" style="font-family:'Times New Roman'; font-size:16px; border:none; outline:none; width:90px; text-align:center;">
+  </div>
+  <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+      <span style="font-family:'Times New Roman'; font-size:16px; font-weight:bold; padding-left:5px;">Đến:</span>
+      <input type="text" id="dTo" placeholder="dd/mm/yyyy" maxlength="10" oninput="theTepL(this)" onkeydown="ktraEnterLich(event)" style="font-family:'Times New Roman'; font-size:16px; border:none; outline:none; width:90px; text-align:center;">
+  </div>
+  <button class="btn-submit" onclick="taiDlTraCuuLich()" style="background:#2563eb;">🔍 Tìm Lịch</button>
+</div>
+
+<div class="table-scroll" style="max-height: 65vh;">
+  <table id="tblView" style="width:100%; border-collapse:collapse; background:white;">
+    <thead style="position: sticky; top: 0; z-index: 10;">
+      <tr>
+        <th style="width:100px; text-align:center; padding:6px;">Ngày/Giờ</th>
+        <th style="width:200px; text-align:center; padding:6px;">Nội dung công việc</th>
+        <th style="width:120px; text-align:center; padding:6px;">Địa điểm</th>
+        <th style="width:150px; text-align:center; padding:6px;">Thành phần</th>
+        <th style="width:120px; text-align:center; padding:6px;">Chủ trì</th>
+        <th style="width:80px; text-align:center; padding:6px;">Tài liệu</th>
+        <th style="width:60px; text-align:center; padding:6px;">Làm việc</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="7" style="text-align:center; font-style:italic; color:#666;">Chưa có dữ liệu</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let dlGocLich = [];
+  
+  function ktraEnterLich(e) { if(e.key === 'Enter') taiDlTraCuuLich(); }
+
+  function taiDlTraCuuLich() {
+      document.getElementById('loading-text').innerText = "⏳ Đang lấy dữ liệu lịch...";
+      document.getElementById('loading-overlay').style.display = 'flex';
+      heThong.server.chay.voiKhiTcong(kq => {
+          document.getElementById('loading-overlay').style.display = 'none';
+          dlGocLich = kq; veBangLich();
+      }).voiKhiLoi(l => {
+          document.getElementById('loading-overlay').style.display = 'none'; hienTbao("Lỗi: " + l.message, "error");
+      }).cvLayDlLich();
+  }
+
+  function tachNgay(str) { 
+      if(!str) return 0; 
+      try { const p = str.split('/'); if(p.length < 3) return 0; return new Date(p[2], p[1]-1, p[0]).getTime(); } 
+      catch(e) { return 0; } 
+  }
+
+  function veBangLich() {
+      const tb = document.querySelector('#tblView tbody'); tb.innerHTML = '';
+      let nT = tachNgay(document.getElementById('dFrom').value);
+      let nD = tachNgay(document.getElementById('dTo').value);
+
+      let dLoc = dlGocLich.filter(r => {
+          let n = tachNgay(r[0]);
+          if(nT > 0 && n < nT) return false;
+          if(nD > 0 && n > nD) return false;
+          return true;
+      });
+
+      dLoc.sort((a,b) => tachNgay(b[0]) - tachNgay(a[0]));
+
+      if(dLoc.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không có lịch nào phù hợp!</td></tr>'; return; }
+
+      dLoc.forEach(r => {
+          let nutSua = window_qNhap ? `<button class="btn-delete" style="color:#0369a1; border-color:#38bdf8; background:#e0f2fe;" onclick="chuyenSangSuaLich(this, '${encodeURIComponent(JSON.stringify(r))}')" title="Sửa lịch này">✏️</button>` : '';
+          let dsL = "";
+          let lkT = r[6]; if(typeof lkT === 'object') lkT = lkT.url || "";
+          if (lkT && lkT.trim() !== "") {
+              let cls = lkT.split(',').map(l => l.trim()).filter(l => l !== "");
+              dsL = cls.map((l, i) => `<a href="${l}" target="_blank" class="btn-icon btn-view-icon">📎 ${i+1}</a>`).join('');
+          }
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="text-align:center; padding:6px; font-weight:bold;">${r[0]}<br><span style="color:#0369a1;">${r[1]}</span></td>
+            <td style="padding:6px; font-weight:bold;">${r[2]}</td>
+            <td style="text-align:center; padding:6px;">${r[3]}</td>
+            <td style="padding:6px;">${r[4]}</td>
+            <td style="text-align:center; padding:6px; font-weight:bold; color:#b91c1c;">${r[5]}</td>
+            <td style="text-align:center; padding:6px;">${dsL}</td>
+            <td style="text-align:center; padding:6px;">${nutSua}</td>
+          `;
+          tb.appendChild(tr);
+      });
+  }
+
+  function chuyenSangSuaLich(btn, mh) {
+       try {
+           const dG = JSON.parse(decodeURIComponent(mh));
+           document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+           document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+           document.getElementById('tabLich').classList.add('active');
+           document.getElementById('btnTabLich').classList.add('active');
+           themdongLich(dG);
+           const tr = btn.closest('tr'); tr.style.backgroundColor = '#fef9c3'; setTimeout(() => tr.remove(), 500);
+           hienTbao("Đã chuyển sang Nhập Lịch!", "success");
+       } catch(e) { hienTbao("Lỗi đọc dữ liệu!", "error"); }
+  }
+</script>

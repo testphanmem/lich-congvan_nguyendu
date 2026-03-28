@@ -1,0 +1,155 @@
+<style>
+  .btn-icon { border: 1px solid #ccc; background: #f1f5f9; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 28px; }
+  .btn-upload-icon:hover { background: #e2e8f0; border-color: #94a3b8; }
+  .btn-view-icon { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; padding: 4px 6px; }
+  .btn-view-icon:hover { background: #bfdbfe; }
+</style>
+
+<div style="margin-bottom: 10px; overflow: hidden; display: flex; justify-content: space-between; align-items: center;">
+  <div style="font-family:'Times New Roman'; font-weight:bold; color:#1e3a8a; font-size:16px;">
+    📝 NHẬP LỊCH CÔNG TÁC
+  </div>
+</div>
+
+<div class="table-scroll">
+  <table id="tblLich">
+    <thead>
+      <tr>
+        <th style="width:40px">Xóa</th>
+        <th style="width:110px">Thời gian<br>(dd/mm/yyyy)</th> <th style="width:70px">Giờ</th>
+        <th style="width:200px">Nội dung công việc</th> <th style="width:150px">Địa điểm</th>
+        <th style="width:150px">Thành phần</th> <th style="width:120px">Chủ trì</th>
+        <th style="width:150px">Tài liệu/Phân công</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+<div style="margin-top:10px; overflow: hidden;">
+  <button class="btn-submit" style="background:#0284c7;" onclick="themdongLich()">➕ Thêm dòng</button>
+  <button class="btn-submit" onclick="luuDlLich()" style="float:right;">💾 LƯU LỊCH</button>
+</div>
+
+<script>
+function tdKichCo(pt) { pt.style.height = 'auto'; pt.style.height = pt.scrollHeight + 'px'; }
+
+function theTepL(t) {
+   let m = t.value.replace(/\D/g, '');
+   if (m.length >= 2) m = m.substring(0,2) + '/' + m.substring(2);
+   if (m.length >= 5) m = m.substring(0,5) + '/' + m.substring(5, 9);
+   t.value = m;
+}
+
+function themdongLich(mdl = null) {
+    if (!window_qNhap) return hienTbao("Không có quyền nhập!", "error");
+    const tB = document.querySelector('#tblLich tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center;"><button class="btn-delete" onclick="xoadoLich(this)">✕</button></td>
+      <td><input type="text" placeholder="dd/mm/yyyy" class="cNgay" maxlength="10" oninput="theTepL(this)"></td>
+      <td><input type="text" placeholder="hh:mm" class="cGio"></td>
+      <td><textarea placeholder="Nội dung..." class="cNdung" oninput="tdKichCo(this)"></textarea></td>
+      <td><textarea placeholder="Địa điểm..." class="cDiad" oninput="tdKichCo(this)"></textarea></td>
+      <td><textarea placeholder="Thành phần..." class="cTphan" oninput="tdKichCo(this)"></textarea></td>
+      <td><textarea placeholder="Chủ trì..." class="cChutri" oninput="tdKichCo(this)"></textarea></td>
+      <td style="text-align:center;">
+          <input type="hidden" class="val-link">
+          <input type="hidden" class="val-id">
+          <div class="link-display-area" style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-bottom:4px;"></div>
+          <button class="btn-icon btn-upload-icon nTai" onclick="moSuaTepL(this)">📎 Đính kèm</button>
+          <input type="file" style="display:none;" multiple onchange="chonTepL(this)">
+      </td>
+    `;
+    tB.appendChild(tr);
+
+    if (mdl) {
+        tr.querySelector('.cNgay').value = mdl[0] || "";
+        tr.querySelector('.cGio').value = mdl[1] || "";
+        tr.querySelector('.cNdung').value = mdl[2] || "";
+        tr.querySelector('.cDiad').value = mdl[3] || "";
+        tr.querySelector('.cTphan').value = mdl[4] || "";
+        tr.querySelector('.cChutri').value = mdl[5] || "";
+        
+        let cLk = mdl[6];
+        if (typeof cLk === 'object') cLk = cLk.url || "";
+        
+        tr.querySelector('.val-link').value = cLk;
+        tr.querySelector('.val-id').value = mdl[7] || "";
+
+        const vHt = tr.querySelector('.link-display-area');
+        const ntTai = tr.querySelector('.nTai');
+        if (cLk && cLk.trim() !== "") {
+            const cls = cLk.split(',').map(l => l.trim()).filter(l => l !== "");
+            vHt.innerHTML = cls.map((l, i) => `<a href="${l}" target="_blank" class="btn-icon btn-view-icon">📎 ${i + 1}</a>`).join('');
+            ntTai.innerHTML = '📝 Sửa/Thêm'; ntTai.style.borderColor = "#f59e0b";
+        }
+        tr.querySelectorAll('textarea').forEach(tx => tdKichCo(tx));
+    }
+}
+
+function xoadoLich(nt) { if(confirm("Xoá dòng này?")) nt.closest('tr').remove(); }
+
+function moSuaTepL(nt) {
+    if (!window_qNhap) return hienTbao("Không có quyền!", "error");
+    nt.nextElementSibling.click();
+}
+
+function chonTepL(inF) {
+    if (!inF.files || inF.files.length === 0) return;
+    const tr = inF.closest('tr');
+    const cNg = tr.querySelector('.cNgay').value.replace(/\//g, '');
+    if (!cNg) return hienTbao("Nhập ngày trước khi đính kèm!", "error");
+    
+    document.getElementById('loading-text').innerText = "⏳ Đang tải file lên...";
+    document.getElementById('loading-overlay').style.display = 'flex';
+
+    let mtp = []; let dm = 0;
+    Array.from(inF.files).forEach(f => {
+        const d = new FileReader();
+        d.onload = e => {
+            mtp.push({ fileName: f.name, mimeType: f.type, data: e.target.result.split(',')[1] });
+            dm++;
+            if (dm === inF.files.length) {
+                let lC = tr.querySelector('.val-link').value;
+                heThong.server.chay.voiKhiTcong(kq => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    if (kq.tCong) {
+                        hienTbao(kq.tBao, 'success');
+                        tr.querySelector('.val-link').value = kq.lkTep;
+                        let vs = kq.lkTep.split(',').map(l => l.trim()).filter(l => l!=="");
+                        tr.querySelector('.link-display-area').innerHTML = vs.map((l, i) => `<a href="${l}" target="_blank" class="btn-icon btn-view-icon">📎 ${i + 1}</a>`).join('');
+                        tr.querySelector('.nTai').innerHTML = '📝 Sửa/Thêm'; tr.querySelector('.nTai').style.borderColor = "#f59e0b";
+                    } else hienTbao(kq.tBao, 'error');
+                }).voiKhiLoi(lx => {
+                    document.getElementById('loading-overlay').style.display = 'none'; hienTbao(lx.message, 'error');
+                }).cvTaiTepLichDrive(mtp, "LICH_" + cNg, null, lC, 'replace');
+            }
+        };
+        d.readAsDataURL(f);
+    });
+}
+
+function luuDlLich() {
+    if (!window_qNhap) return hienTbao("Không có quyền!", "error");
+    const mG = []; let hLp = true;
+    document.querySelectorAll('#tblLich tbody tr').forEach((tr, i) => {
+        let n1 = tr.querySelector('.cNgay').value.trim();
+        let n2 = tr.querySelector('.cGio').value.trim();
+        let n3 = tr.querySelector('.cNdung').value.trim();
+        if (!n1 || !n3) { hienTbao(`Dòng ${i+1}: Ngày và Nội dung không được để trống!`, "error"); hLp = false; return; }
+        mG.push([n1, n2, n3, tr.querySelector('.cDiad').value.trim(), tr.querySelector('.cTphan').value.trim(), tr.querySelector('.cChutri').value.trim(), tr.querySelector('.val-link').value, tr.querySelector('.val-id').value || ""]);
+    });
+    if (!hLp || mG.length === 0) return;
+
+    document.getElementById('loading-text').innerText = "⏳ Đang lưu lịch...";
+    document.getElementById('loading-overlay').style.display = 'flex';
+    
+    heThong.server.chay.voiKhiTcong(k => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        if (k.tCong) { hienTbao(k.tBao, 'success'); document.querySelector('#tblLich tbody').innerHTML = ""; themdongLich(); } 
+        else hienTbao(k.tBao, 'error');
+    }).voiKhiLoi(l => {
+        document.getElementById('loading-overlay').style.display = 'none'; hienTbao(l.message, 'error');
+    }).cvLuuDlLich(mG);
+}
+</script>
