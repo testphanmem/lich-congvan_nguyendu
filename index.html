@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <link rel="icon" href="https://i.ibb.co/8Df1xXsN/Logo-nguyen-du.png">
+  <link rel="icon" href="https://i.ibb.co/SXSKh9xM/Logo-m-i-c-a-tr-ng-H-p-Th-Nh.png">
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -52,7 +52,7 @@
 
   <div id="manhDn">
     <div class="hopDn">
-      <img src="https://i.ibb.co/8Df1xXsN/Logo-nguyen-du.png" class="logoDn">
+      <img src="https://i.ibb.co/SXSKh9xM/Logo-m-i-c-a-tr-ng-H-p-Th-Nh.png" class="logoDn">
       <h2 style="color: #b91c1c; margin-top: 0; font-size: 20px; text-transform: uppercase; font-weight: bold;">Hệ&#8203; thố&#8203;ng Quả&#8203;n lý&#8203;</h2>
       <h3 style="color: #1e3a8a; margin-bottom: 25px; font-size: 16px;">Cô&#8203;ng vă&#8203;n & Lị&#8203;ch cô&#8203;ng tá&#8203;c</h3>
       <div style="font-size: 13px; padding: 10px; margin-bottom: 20px; border-radius: 6px; background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; text-align: left;">
@@ -72,8 +72,8 @@
   <div id="udChinh" style="display: none;">
     <div class="tdeDau">
       <div style="display: flex; align-items: center; gap: 15px;">
-        <img src="https://i.ibb.co/8Df1xXsN/Logo-nguyen-du.png" style="height: 40px;">
-        <div><div class="chuDau">Trường tiểu học Nguyễn Du</div><div style="font-size: 12px; color: #64748b;">Quản lý Cô&#8203;ng vă&#8203;n & Lị&#8203;ch cô&#8203;ng tá&#8203;c</div></div>
+        <img src="https://i.ibb.co/SXSKh9xM/Logo-m-i-c-a-tr-ng-H-p-Th-Nh.png" style="height: 40px;">
+        <div><div class="chuDau">TH&THCS HỢP THÀNH</div><div style="font-size: 12px; color: #64748b;">Quản lý Cô&#8203;ng vă&#8203;n & Lị&#8203;ch cô&#8203;ng tá&#8203;c</div></div>
       </div>
       <div style="text-align: right;">
         <div id="ttinNd" style="font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 4px;"></div>
@@ -107,6 +107,9 @@
           document.getElementById('manhDn').style.display = 'none';
           document.getElementById('vungTai').style.display = 'flex';
           taiPhanGiaoDien();
+      } else {
+          // HIỆN KHUNG ĐĂNG NHẬP NẾU CHƯA CÓ TÀI KHOẢN (Tắt vòng xoay)
+          document.getElementById('vungTai').style.display = 'none';
       }
   };
 
@@ -172,7 +175,10 @@
                 hienTbao("Lỗi xá&#8203;c thự&#8203;c: " + l.message, "loi");
             }).cvLayDlDau();
         }, 800);
-      } catch (e) { alert("Lỗi tải trang: " + e.message); }
+      } catch (e) { 
+          document.getElementById('vungTai').style.display = 'none';
+          alert("Lỗi tải trang: " + e.message); 
+      }
   }
 
   function thuchScript(pt) {
@@ -196,7 +202,7 @@
   
   function hienTbao(chu, kieu='tc') {
       const b = document.getElementById('tbNhanh');
-      b.innerText = chu;
+      b.innerHTML = chu; // Thay đổi innerText thành innerHTML để hiển thị đúng ký tự tàng hình
       b.className = kieu === 'loi' ? "loi" : "tc";
       b.style.display = 'block';
       setTimeout(() => { b.style.display = 'none'; }, 3000);
