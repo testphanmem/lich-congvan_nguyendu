@@ -1,0 +1,125 @@
+<div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+  <span style="font-weight:bold; font-size:15px; color:#1e3a8a;">👋 Mời chọn điều kiện để tìm kiếm...</span>
+</div>
+
+<div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px; background:#e0f2fe; border:1px solid #bae6fd; margin-bottom:10px;">
+    <select id="traCuuKieuLoai" style="padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="taiDuLieuTraCuuCongVan()"><option value="">-- Chiều (Đến/Đi) --</option><option value="Đến">Văn bản Đến</option><option value="Đi">Văn bản Đi</option></select>
+    <select id="traCuuKieuCap" style="padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="taiDuLieuTraCuuCongVan()"><option value="">-- CQ Ban Hành --</option></select>
+    <select id="traCuuLoaiVanBan" style="padding:5px; border-radius:4px; border:1px solid #ccc;" onchange="taiDuLieuTraCuuCongVan()"><option value="">-- Loại VB --</option></select>
+    <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+        <span style="font-size:12px; font-weight:bold; padding-left:5px;">Từ:</span>
+        <input type="text" id="traCuuTuNgay" placeholder="dd/mm/yyyy" maxlength="10" oninput="dinhDangNgayThangTep(this)" style="border:none; outline:none; width:75px; text-align:center;">
+    </div>
+    <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+        <span style="font-size:12px; font-weight:bold; padding-left:5px;">Đến:</span>
+        <input type="text" id="traCuuDenNgay" placeholder="dd/mm/yyyy" maxlength="10" oninput="dinhDangNgayThangTep(this)" style="border:none; outline:none; width:75px; text-align:center;">
+    </div>
+    <input type="text" id="traCuuTuKhoa" placeholder="Gõ Trích yếu / Số KH..." style="padding:5px; border-radius:4px; border:1px solid #ccc; width:160px;" onkeydown="if(event.key==='Enter')taiDuLieuTraCuuCongVan()">
+    <button onclick="taiDuLieuTraCuuCongVan()" style="background:#2563eb; color:white; border:none; padding:5px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">🔍 Lọc</button>
+</div>
+
+<div style="overflow-x: auto; max-height: 65vh;">
+  <table class="bangHienThi" id="bangXemCongVan">
+    <thead style="position: sticky; top: 0; z-index: 10;">
+      <tr>
+        <th style="width:90px;">Ngày VB</th>
+        <th style="width:110px;">Số/Ký hiệu</th>
+        <th style="width:250px;">Trích yếu nội dung</th>
+        <th style="width:120px;">Nơi/Người ký</th>
+        <th style="width:100px;">Chi tiết</th>
+        <th style="width:60px;">Làm việc</th>
+      </tr>
+    </thead>
+    <tbody id="thanBangXemCongVan">
+      <tr><td colspan="6" style="text-align:center; font-style:italic; color:#666;">Chưa có dữ liệu</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let duLieuGocCongVan = [];
+
+  function khoiTaoTraCuuCongVan(danhMucMuc) {
+      const theCapTraCuu = document.getElementById('traCuuKieuCap'); theCapTraCuu.innerHTML = '<option value="">-- CQ Ban Hành --</option>' + danhMucMuc.noiBanHanh.map(mucThongTin => `<option value="${mucThongTin}">${mucThongTin}</option>`).join('');
+      const theLoaiVbTraCuu = document.getElementById('traCuuLoaiVanBan'); theLoaiVbTraCuu.innerHTML = '<option value="">-- Loại VB --</option>' + danhMucMuc.loaiVanBan.map(mucThongTin => `<option value="${mucThongTin}">${mucThongTin}</option>`).join('');
+  }
+
+  function taiDuLieuTraCuuCongVan() {
+      document.getElementById('chuTai').innerText = "⏳ Đang lấy dữ liệu...";
+      document.getElementById('vungTai').style.display = 'flex';
+      heThong.mayChu.chay.khiThanhCong(ketQuaLay => {
+          document.getElementById('vungTai').style.display = 'none';
+          duLieuGocCongVan = ketQuaLay; veBangKetQuaCongVan();
+      }).khiCoLoi(loiPhatSinh => {
+          document.getElementById('vungTai').style.display = 'none'; hienThiThongBao("Lỗi: " + loiPhatSinh.message, "loi");
+      }).layDuLieuCongVan();
+  }
+
+  function veBangKetQuaCongVan() {
+      const thanBangKetQua = document.getElementById('thanBangXemCongVan'); thanBangKetQua.innerHTML = '';
+      
+      let dieuKienLoai = document.getElementById('traCuuKieuLoai').value.trim();
+      let dieuKienCap = document.getElementById('traCuuKieuCap').value.trim();
+      let dieuKienLoaiVb = document.getElementById('traCuuLoaiVanBan').value.trim();
+      let dieuKienTuNgay = tachNgayThang(document.getElementById('traCuuTuNgay').value);
+      let dieuKienDenNgay = tachNgayThang(document.getElementById('traCuuDenNgay').value);
+      let dieuKienTuKhoa = document.getElementById('traCuuTuKhoa').value.trim().toLowerCase();
+
+      let danhSachLocChuan = duLieuGocCongVan.filter(dongDuLieu => {
+          if(dieuKienLoai && String(dongDuLieu[0]).trim() !== dieuKienLoai) return false;
+          if(dieuKienCap && String(dongDuLieu[1]).trim() !== dieuKienCap) return false;
+          if(dieuKienLoaiVb && String(dongDuLieu[3]).trim() !== dieuKienLoaiVb) return false;
+          
+          let giaTriNgayDong = tachNgayThang(dongDuLieu[4]);
+          if(dieuKienTuNgay > 0 && giaTriNgayDong < dieuKienTuNgay) return false;
+          if(dieuKienDenNgay > 0 && giaTriNgayDong > dieuKienDenNgay) return false;
+
+          if(dieuKienTuKhoa) {
+              let chuoiSoKyHieu = String(dongDuLieu[5]).toLowerCase();
+              let chuoiTrichYeu = String(dongDuLieu[6]).toLowerCase();
+              if(!chuoiSoKyHieu.includes(dieuKienTuKhoa) && !chuoiTrichYeu.includes(dieuKienTuKhoa)) return false;
+          }
+          return true;
+      });
+
+      danhSachLocChuan.sort((dongA, dongB) => tachNgayThang(dongB[4]) - tachNgayThang(dongA[4]));
+
+      if(danhSachLocChuan.length === 0) { thanBangKetQua.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không tìm thấy!</td></tr>'; return; }
+
+      danhSachLocChuan.forEach(dongDuLieu => {
+          let nutSuaDong = coQuyenNhap ? `<button class="nutXoa" style="color:#0369a1; border-color:#38bdf8; background:#e0f2fe;" onclick="chuyenSangGiaoDienSuaCongVan(this, '${encodeURIComponent(JSON.stringify(dongDuLieu))}')" title="Sửa dòng này">✏️</button>` : '';
+          let theHienThiLienKet = "";
+          let linkLuuTam = dongDuLieu[8]; if(typeof linkLuuTam === 'object') linkLuuTam = linkLuuTam.url || "";
+          if (linkLuuTam && linkLuuTam.trim() !== "") {
+              let mangLienKetNho = linkLuuTam.split(',').map(lk => lk.trim()).filter(lk => lk !== "");
+              theHienThiLienKet = mangLienKetNho.map((lk, chiSoM) => `<a href="${lk}" target="_blank" class="nutTaiMinhChung nutXemFile">📎 File ${chiSoM+1}</a>`).join('');
+          }
+          
+          let mauHienThiLoai = String(dongDuLieu[0]).trim() === "Đến" ? "color:#b91c1c;" : "color:#047857;";
+          
+          const theTrMoi = document.createElement('tr');
+          theTrMoi.innerHTML = `
+            <td style="text-align:center; font-weight:bold;">${dongDuLieu[4]}<br><span style="${mauHienThiLoai} font-size:12px;">[VB ${dongDuLieu[0]}]</span></td>
+            <td style="font-weight:bold; color:#1e3a8a; text-align:center;">${dongDuLieu[5]}</td>
+            <td style="font-weight:bold;">${dongDuLieu[6]}</td>
+            <td style="text-align:center;">${dongDuLieu[7]}</td>
+            <td style="text-align:center; font-size:12px;">${theHienThiLienKet}</td>
+            <td style="text-align:center;">${nutSuaDong}</td>
+          `;
+          thanBangKetQua.appendChild(theTrMoi);
+      });
+  }
+
+  function chuyenSangGiaoDienSuaCongVan(nutBamGoi, maHoaDuLieu) {
+       try {
+           const duLieuSuaDaGiaiMa = JSON.parse(decodeURIComponent(maHoaDuLieu));
+           document.querySelectorAll('.noiDungTab').forEach(phanTu => phanTu.classList.remove('dangMo'));
+           document.querySelectorAll('.nutChuyenTab').forEach(phanTu => phanTu.classList.remove('dangMo'));
+           document.getElementById('tabCongVan').classList.add('dangMo');
+           document.querySelectorAll('.nutChuyenTab')[1].classList.add('dangMo');
+           themDongCongVan(duLieuSuaDaGiaiMa);
+           const theDongGoc = nutBamGoi.closest('tr'); theDongGoc.style.backgroundColor = '#fef9c3'; setTimeout(() => theDongGoc.remove(), 500);
+           hienThiThongBao("Đã chuyển sang Nhập Công Văn!", "thanhCong");
+       } catch(loiPhatSinh) { hienThiThongBao("Lỗi đọc dữ liệu!", "loi"); }
+  }
+</script>

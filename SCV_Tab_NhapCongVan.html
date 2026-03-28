@@ -1,0 +1,125 @@
+<div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+  <div style="font-weight:bold; color:#b91c1c; font-size:16px;">📂 NHẬP CÔNG VĂN ĐI / ĐẾN</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; background:#fff1f2; padding:10px; border-radius:6px; border:1px solid #fecdd3;">
+  <div style="display:flex; flex-direction:column; width:150px;">
+      <span style="font-size:12px; font-weight:bold; color:#be123c;">1. Loại (Đến/Đi)</span>
+      <select id="nhapChonLoai" style="padding:5px; border:1px solid #ccc; border-radius:4px;"><option value="Đến">Văn bản Đến</option><option value="Đi">Văn bản Đi</option></select>
+  </div>
+  <div style="display:flex; flex-direction:column; width:150px;">
+      <span style="font-size:12px; font-weight:bold; color:#be123c;">2. Cấp ban hành</span>
+      <select id="nhapChonCap" style="padding:5px; border:1px solid #ccc; border-radius:4px;"><option value="">--Chọn--</option></select>
+  </div>
+  <div style="display:flex; flex-direction:column; width:150px;">
+      <span style="font-size:12px; font-weight:bold; color:#be123c;">3. Lĩnh vực</span>
+      <select id="nhapChonLinhVuc" style="padding:5px; border:1px solid #ccc; border-radius:4px;"><option value="">--Chọn--</option></select>
+  </div>
+  <div style="display:flex; flex-direction:column; width:150px;">
+      <span style="font-size:12px; font-weight:bold; color:#be123c;">4. Loại văn bản</span>
+      <select id="nhapChonLoaiVanBan" style="padding:5px; border:1px solid #ccc; border-radius:4px;"><option value="">--Chọn--</option></select>
+  </div>
+</div>
+
+<div style="overflow-x: auto;">
+  <table class="bangHienThi" id="bangThongTinCongVan">
+    <thead style="background-color: #b91c1c !important;">
+      <tr>
+        <th style="width:40px; background-color: #b91c1c; color: white;">Xóa</th>
+        <th style="width:110px; background-color: #b91c1c; color: white;">Ngày VB<br>(dd/mm/yyyy)</th>
+        <th style="width:120px; background-color: #b91c1c; color: white;">Số/Ký hiệu</th>
+        <th style="width:250px; background-color: #b91c1c; color: white;">Trích yếu nội dung</th>
+        <th style="width:140px; background-color: #b91c1c; color: white;">Người ký</th>
+        <th style="width:160px; background-color: #b91c1c; color: white;">Đính kèm File/Link</th>
+        <th style="width:150px; background-color: #b91c1c; color: white;">Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody id="thanBangCongVan"></tbody>
+  </table>
+</div>
+<div style="margin-top:10px;">
+  <button class="nutLuu" style="background:#0284c7;" onclick="themDongCongVan()">➕ Thêm dòng</button>
+  <button class="nutLuu" onclick="luuDuLieuCongVan()" style="float:right; background:#b91c1c;">💾 LƯU CÔNG VĂN</button>
+</div>
+
+<script>
+function khoiTaoCongVan(danhMucMuc) {
+    const theCap = document.getElementById('nhapChonCap'); theCap.innerHTML = '<option value="">--Chọn--</option>' + danhMucMuc.noiBanHanh.map(mucThongTin => `<option value="${mucThongTin}">${mucThongTin}</option>`).join('');
+    const theLinhVuc = document.getElementById('nhapChonLinhVuc'); theLinhVuc.innerHTML = '<option value="">--Chọn--</option>' + danhMucMuc.linhVuc.map(mucThongTin => `<option value="${mucThongTin}">${mucThongTin}</option>`).join('');
+    const theLoaiVb = document.getElementById('nhapChonLoaiVanBan'); theLoaiVb.innerHTML = '<option value="">--Chọn--</option>' + danhMucMuc.loaiVanBan.map(mucThongTin => `<option value="${mucThongTin}">${mucThongTin}</option>`).join('');
+}
+
+function themDongCongVan(mangDuLieuCu = null) {
+    if (!coQuyenNhap) return hienThiThongBao("Không có quyền!", "loi");
+    const thanBang = document.getElementById('thanBangCongVan');
+    const theDongTr = document.createElement('tr');
+    theDongTr.innerHTML = `
+      <td style="text-align:center;"><button class="nutXoa" onclick="xoaDongCongVan(this)">✕</button></td>
+      <td><input type="text" placeholder="dd/mm/yyyy" class="cotNgay" maxlength="10" oninput="dinhDangNgayThangTep(this)"></td>
+      <td><textarea class="cotSo" placeholder="Số/Ký hiệu..." oninput="tuDongKichCoTextBox(this)"></textarea></td>
+      <td><textarea class="cotNoiDung" placeholder="Trích yếu..." oninput="tuDongKichCoTextBox(this)"></textarea></td>
+      <td><textarea class="cotNguoiKy" placeholder="Người ký..." oninput="tuDongKichCoTextBox(this)"></textarea></td>
+      <td style="text-align:center;">
+          <input type="hidden" class="giaTriLienKet">
+          <div class="vungHienThiLienKet" style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-bottom:4px;"></div>
+          <button class="nutTaiMinhChung nutTaiFile" onclick="moHopThoaiTaiCongVan(this)">📎 Đính kèm</button>
+      </td>
+      <td><textarea class="cotGhiChu" placeholder="Ghi chú..." oninput="tuDongKichCoTextBox(this)"></textarea></td>
+    `;
+    thanBang.appendChild(theDongTr);
+
+    if (mangDuLieuCu) {
+        theDongTr.querySelector('.cotNgay').value = mangDuLieuCu[0] || "";
+        theDongTr.querySelector('.cotSo').value = mangDuLieuCu[1] || "";
+        theDongTr.querySelector('.cotNoiDung').value = mangDuLieuCu[2] || "";
+        theDongTr.querySelector('.cotNguoiKy').value = mangDuLieuCu[3] || "";
+        theDongTr.querySelector('.cotGhiChu').value = mangDuLieuCu[5] || "";
+        
+        let linkDaLuu = mangDuLieuCu[4];
+        if (typeof linkDaLuu === 'object') linkDaLuu = linkDaLuu.url || "";
+        
+        let theInputLienKet = theDongTr.querySelector('.giaTriLienKet'); theInputLienKet.value = linkDaLuu; theInputLienKet.setAttribute("data-id", mangDuLieuCu[6] || "");
+
+        const vungHienThi = theDongTr.querySelector('.vungHienThiLienKet'); const nutTaiDinhKem = theDongTr.querySelector('.nutTaiFile');
+        if (linkDaLuu && linkDaLuu.trim() !== "") {
+            const mangCacLienKet = linkDaLuu.split(',').map(lk => lk.trim()).filter(lk => lk !== "");
+            vungHienThi.innerHTML = mangCacLienKet.map((lk, chiSoM) => `<a href="${lk}" target="_blank" class="nutTaiMinhChung nutXemFile">📎 ${chiSoM + 1}</a>`).join('');
+            nutTaiDinhKem.innerHTML = '📝 Sửa'; nutTaiDinhKem.style.borderColor = "#f59e0b";
+        }
+        theDongTr.querySelectorAll('textarea').forEach(khungChu => tuDongKichCoTextBox(khungChu));
+    }
+}
+
+function xoaDongCongVan(nutBamGoi) { if(confirm("Xoá dòng này?")) nutBamGoi.closest('tr').remove(); }
+
+function luuDuLieuCongVan() {
+    if (!coQuyenNhap) return hienThiThongBao("Không có quyền!", "loi");
+    const kieuLoai = document.getElementById('nhapChonLoai').value;
+    const kieuCap = document.getElementById('nhapChonCap').value;
+    const kieuLinhVuc = document.getElementById('nhapChonLinhVuc').value;
+    const kieuLoaiVb = document.getElementById('nhapChonLoaiVanBan').value;
+    
+    if (!kieuLoai || !kieuCap || !kieuLinhVuc || !kieuLoaiVb) return hienThiThongBao("Vui lòng chọn đầy đủ 4 ô Phân loại phía trên!", "loi");
+
+    const mangGhiDuLieu = []; let hopLeLuu = true;
+    document.querySelectorAll('#thanBangCongVan tr').forEach((theDongTr, chiSoLap) => {
+        let ngayGhi = theDongTr.querySelector('.cotNgay').value.trim();
+        let soGhi = theDongTr.querySelector('.cotSo').value.trim();
+        let noiDungGhi = theDongTr.querySelector('.cotNoiDung').value.trim();
+        if (!ngayGhi || !soGhi || !noiDungGhi) { hienThiThongBao(`Dòng ${chiSoLap+1}: Ngày, Số và Trích yếu không được trống!`, "loi"); hopLeLuu = false; return; }
+        mangGhiDuLieu.push([kieuLoai, kieuCap, kieuLinhVuc, kieuLoaiVb, ngayGhi, soGhi, noiDungGhi, theDongTr.querySelector('.cotNguoiKy').value.trim(), theDongTr.querySelector('.giaTriLienKet').value, theDongTr.querySelector('.cotGhiChu').value.trim(), new Date().toLocaleDateString('vi-VN'), theDongTr.querySelector('.giaTriLienKet').getAttribute('data-id') || ""]);
+    });
+    if (!hopLeLuu || mangGhiDuLieu.length === 0) return;
+
+    document.getElementById('chuTai').innerText = "⏳ Đang lưu công văn...";
+    document.getElementById('vungTai').style.display = 'flex';
+    
+    heThong.mayChu.chay.khiThanhCong(ketQuaLuu => {
+        document.getElementById('vungTai').style.display = 'none';
+        if (ketQuaLuu.thanhCong) { hienThiThongBao(ketQuaLuu.thongBao, 'thanhCong'); document.getElementById('thanBangCongVan').innerHTML = ""; themDongCongVan(); } 
+        else hienThiThongBao(ketQuaLuu.thongBao, 'loi');
+    }).khiCoLoi(loiPhatSinh => {
+        document.getElementById('vungTai').style.display = 'none'; hienThiThongBao(loiPhatSinh.message, 'loi');
+    }).luuDuLieuCongVan(mangGhiDuLieu);
+}
+</script>

@@ -1,0 +1,106 @@
+<div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+  <span style="font-weight:bold; font-size:15px; color:#1e3a8a;">👋 Mời chọn khoảng thời gian để xem lịch...</span>
+</div>
+
+<div style="background:#e0f2fe; padding:10px; border:1px solid #bae6fd; margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+  <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+      <span style="font-size:14px; font-weight:bold; padding-left:5px;">Từ:</span>
+      <input type="text" id="traCuuThoiGianTuNgayLich" placeholder="dd/mm/yyyy" maxlength="10" oninput="dinhDangNgayThangTep(this)" style="border:none; outline:none; width:90px; text-align:center;">
+  </div>
+  <div style="display:flex; align-items:center; gap:5px; background:white; padding:3px; border-radius:4px; border:1px solid #ccc;">
+      <span style="font-size:14px; font-weight:bold; padding-left:5px;">Đến:</span>
+      <input type="text" id="traCuuThoiGianDenNgayLich" placeholder="dd/mm/yyyy" maxlength="10" oninput="dinhDangNgayThangTep(this)" style="border:none; outline:none; width:90px; text-align:center;">
+  </div>
+  <button onclick="taiDuLieuTraCuuLich()" style="background:#2563eb; color:white; border:none; padding:5px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">🔍 Tìm Lịch</button>
+</div>
+
+<div style="overflow-x: auto; max-height: 65vh;">
+  <table class="bangHienThi" id="bangXemLichGiaoDien">
+    <thead style="position: sticky; top: 0; z-index: 10;">
+      <tr>
+        <th style="width:100px;">Ngày/Giờ</th>
+        <th style="width:200px;">Nội dung</th>
+        <th style="width:120px;">Địa điểm</th>
+        <th style="width:150px;">Thành phần</th>
+        <th style="width:120px;">Chủ trì</th>
+        <th style="width:80px;">Tài liệu</th>
+        <th style="width:60px;">Làm việc</th>
+      </tr>
+    </thead>
+    <tbody id="thanBangXemLich">
+      <tr><td colspan="7" style="text-align:center; font-style:italic; color:#666;">Chưa có dữ liệu</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let duLieuGocLichLuu = [];
+  
+  function taiDuLieuTraCuuLich() {
+      document.getElementById('chuTai').innerText = "⏳ Đang lấy dữ liệu lịch...";
+      document.getElementById('vungTai').style.display = 'flex';
+      heThong.mayChu.chay.khiThanhCong(ketQuaLay => {
+          document.getElementById('vungTai').style.display = 'none';
+          duLieuGocLichLuu = ketQuaLay; veBangHienThiLich();
+      }).khiCoLoi(loiPhatSinh => {
+          document.getElementById('vungTai').style.display = 'none'; hienThiThongBao("Lỗi: " + loiPhatSinh.message, "loi");
+      }).layDuLieuLich();
+  }
+
+  function tachNgayThang(chuoiNgay) { 
+      if(!chuoiNgay) return 0; 
+      try { const mangPhan = chuoiNgay.split('/'); if(mangPhan.length < 3) return 0; return new Date(mangPhan[2], mangPhan[1]-1, mangPhan[0]).getTime(); } 
+      catch(loiPhanTich) { return 0; } 
+  }
+
+  function veBangHienThiLich() {
+      const thanBangKetQuaLich = document.getElementById('thanBangXemLich'); thanBangKetQuaLich.innerHTML = '';
+      let thoiGianTuNgay = tachNgayThang(document.getElementById('traCuuThoiGianTuNgayLich').value);
+      let thoiGianDenNgay = tachNgayThang(document.getElementById('traCuuThoiGianDenNgayLich').value);
+
+      let danhSachLichLocChuan = duLieuGocLichLuu.filter(dongDuLieu => {
+          let giaTriNgayDong = tachNgayThang(dongDuLieu[0]);
+          if(thoiGianTuNgay > 0 && giaTriNgayDong < thoiGianTuNgay) return false;
+          if(thoiGianDenNgay > 0 && giaTriNgayDong > thoiGianDenNgay) return false;
+          return true;
+      });
+
+      danhSachLichLocChuan.sort((dongA, dongB) => tachNgayThang(dongB[0]) - tachNgayThang(dongA[0]));
+
+      if(danhSachLichLocChuan.length === 0) { thanBangKetQuaLich.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không có lịch nào phù hợp!</td></tr>'; return; }
+
+      danhSachLichLocChuan.forEach(dongDuLieu => {
+          let nutSuaDongLich = coQuyenNhap ? `<button class="nutXoa" style="color:#0369a1; border-color:#38bdf8; background:#e0f2fe;" onclick="chuyenSangGiaoDienSuaLich(this, '${encodeURIComponent(JSON.stringify(dongDuLieu))}')" title="Sửa lịch này">✏️</button>` : '';
+          let theHienThiLienKetLich = "";
+          let linkLuuTamLich = dongDuLieu[6]; if(typeof linkLuuTamLich === 'object') linkLuuTamLich = linkLuuTamLich.url || "";
+          if (linkLuuTamLich && linkLuuTamLich.trim() !== "") {
+              let mangLienKetNho = linkLuuTamLich.split(',').map(lk => lk.trim()).filter(lk => lk !== "");
+              theHienThiLienKetLich = mangLienKetNho.map((lk, chiSoM) => `<a href="${lk}" target="_blank" class="nutTaiMinhChung nutXemFile">📎 ${chiSoM+1}</a>`).join('');
+          }
+          const theTrMoiLich = document.createElement('tr');
+          theTrMoiLich.innerHTML = `
+            <td style="text-align:center; font-weight:bold;">${dongDuLieu[0]}<br><span style="color:#0369a1;">${dongDuLieu[1]}</span></td>
+            <td style="font-weight:bold;">${dongDuLieu[2]}</td>
+            <td style="text-align:center;">${dongDuLieu[3]}</td>
+            <td>${dongDuLieu[4]}</td>
+            <td style="text-align:center; font-weight:bold; color:#b91c1c;">${dongDuLieu[5]}</td>
+            <td style="text-align:center;">${theHienThiLienKetLich}</td>
+            <td style="text-align:center;">${nutSuaDongLich}</td>
+          `;
+          thanBangKetQuaLich.appendChild(theTrMoiLich);
+      });
+  }
+
+  function chuyenSangGiaoDienSuaLich(nutBamGoi, maHoaDuLieuLich) {
+       try {
+           const duLieuLichSuaDaGiaiMa = JSON.parse(decodeURIComponent(maHoaDuLieuLich));
+           document.querySelectorAll('.noiDungTab').forEach(phanTu => phanTu.classList.remove('dangMo'));
+           document.querySelectorAll('.nutChuyenTab').forEach(phanTu => phanTu.classList.remove('dangMo'));
+           document.getElementById('tabLich').classList.add('dangMo');
+           document.querySelectorAll('.nutChuyenTab')[0].classList.add('dangMo');
+           themDongLich(duLieuLichSuaDaGiaiMa);
+           const theDongGocLich = nutBamGoi.closest('tr'); theDongGocLich.style.backgroundColor = '#fef9c3'; setTimeout(() => theDongGocLich.remove(), 500);
+           hienThiThongBao("Đã chuyển sang Nhập Lịch!", "thanhCong");
+       } catch(loiPhatSinh) { hienThiThongBao("Lỗi đọc dữ liệu!", "loi"); }
+  }
+</script>
